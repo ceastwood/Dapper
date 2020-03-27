@@ -8,15 +8,24 @@ namespace Dapper
 {
     public static partial class SqlMapper
     {
-        private class TypeDeserializerCache
+        public class TypeDeserializerCache
         {
-            private TypeDeserializerCache(Type type)
+            protected TypeDeserializerCache(Type type)
             {
                 this.type = type;
             }
 
+
+            public static void AddTypeDeserializerCache(TypeDeserializerCache cache)
+            {
+                lock (byType)
+                {
+                    byType.Add(cache.type, cache);
+                }
+            }
+
             private static readonly Hashtable byType = new Hashtable();
-            private readonly Type type;
+            protected readonly Type type;
             internal static void Purge(Type type)
             {
                 lock (byType)
@@ -50,9 +59,9 @@ namespace Dapper
                 return found.GetReader(reader, startBound, length, returnNullIfFirstMissing);
             }
 
-            private readonly Dictionary<DeserializerKey, Func<IDataReader, object>> readers = new Dictionary<DeserializerKey, Func<IDataReader, object>>();
+            protected readonly Dictionary<DeserializerKey, Func<IDataReader, object>> readers = new Dictionary<DeserializerKey, Func<IDataReader, object>>();
 
-            private struct DeserializerKey : IEquatable<DeserializerKey>
+            protected struct DeserializerKey : IEquatable<DeserializerKey>
             {
                 private readonly int startBound, length;
                 private readonly bool returnNullIfFirstMissing;
@@ -138,7 +147,7 @@ namespace Dapper
                 }
             }
 
-            private Func<IDataReader, object> GetReader(IDataReader reader, int startBound, int length, bool returnNullIfFirstMissing)
+            protected virtual Func<IDataReader, object> GetReader(IDataReader reader, int startBound, int length, bool returnNullIfFirstMissing)
             {
                 if (length < 0) length = reader.FieldCount - startBound;
                 int hash = GetColumnHash(reader, startBound, length);
